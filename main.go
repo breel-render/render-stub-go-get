@@ -44,9 +44,18 @@ func main() {
 		panic(err)
 	}
 	log.Println(u)
-	limiter := rate.NewLimiter(rate.Limit(RPS), 1)
+
 	ctx, can := signal.NotifyContext(context.Background(), syscall.SIGINT)
 	defer can()
+
+	go func() {
+		for ctx.Err() == nil {
+			time.Sleep(time.Second)
+			http.ListenAndServe(":48081", http.HandlerFunc(http.NotFound))
+		}
+	}()
+
+	limiter := rate.NewLimiter(rate.Limit(RPS), 1)
 	for limiter.Wait(ctx) == nil {
 		func() {
 			req, err := http.NewRequest(http.MethodGet, u.String(), nil)
